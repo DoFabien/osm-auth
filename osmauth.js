@@ -43,7 +43,7 @@ module.exports = function(o) {
             o.oauth_secret, '',
             ohauth.baseString('POST', url, params));
 
-        if (!o.singlepage) {
+        if (o.windowType === 'popup') {
             // Create a 600x550 popup window in the center of the screen
             var w = 600, h = 550,
                 settings = [
@@ -70,10 +70,12 @@ module.exports = function(o) {
                 oauth_callback: resolveUrl(o.landing)
             });
 
-            if (o.singlepage) {
+            if (o.windowType === 'singlepage') {
                 location.href = authorize_url;
-            } else {
+            } else if (o.windowType === 'popup')  {
                 popup.location = authorize_url;
+            } else if (o.windowType === 'newFullPage')  {
+                window.open( authorize_url );
             }
         }
 
@@ -213,7 +215,7 @@ module.exports = function(o) {
         o = _;
         o.url = o.url || 'https://www.openstreetmap.org';
         o.landing = o.landing || 'land.html';
-        o.singlepage = o.singlepage || false;
+        o.windowType = o.windowType || 'popup'
 
         // Optional loading and loading-done functions for nice UI feedback.
         // by default, no-ops
@@ -548,7 +550,7 @@ module.exports = function(o) {
      * @property {String} version
      * @readonly
      */
-    VERSION: '1.0.5',
+    VERSION: '1.0.6',
     /**
      * @member Hashes
      * @class Base64
@@ -715,7 +717,7 @@ module.exports = function(o) {
        * See {@link Hashes.MD5#method-setUpperCase} and {@link Hashes.SHA1#method-setUpperCase}
        */
       var hexcase = (options && typeof options.uppercase === 'boolean') ? options.uppercase : false, // hexadecimal output case format. false - lowercase; true - uppercase
-        b64pad = (options && typeof options.pad === 'string') ? options.pda : '=', // base-64 pad character. Defaults to '=' for strict RFC compliance
+        b64pad = (options && typeof options.pad === 'string') ? options.pad : '=', // base-64 pad character. Defaults to '=' for strict RFC compliance
         utf8 = (options && typeof options.utf8 === 'boolean') ? options.utf8 : true; // enable/disable utf8 encoding
 
       // privileged (public) methods
@@ -952,7 +954,7 @@ module.exports = function(o) {
        * See {@link Hashes.MD5#method-setUpperCase} and {@link Hashes.SHA1#method-setUpperCase}
        */
       var hexcase = (options && typeof options.uppercase === 'boolean') ? options.uppercase : false, // hexadecimal output case format. false - lowercase; true - uppercase
-        b64pad = (options && typeof options.pad === 'string') ? options.pda : '=', // base-64 pad character. Defaults to '=' for strict RFC compliance
+        b64pad = (options && typeof options.pad === 'string') ? options.pad : '=', // base-64 pad character. Defaults to '=' for strict RFC compliance
         utf8 = (options && typeof options.utf8 === 'boolean') ? options.utf8 : true; // enable/disable utf8 encoding
 
       // public methods
@@ -1071,7 +1073,7 @@ module.exports = function(o) {
         x[((len + 64 >> 9) << 4) + 15] = len;
 
         for (i = 0; i < x.length; i += 16) {
-          olda = a,
+          olda = a;
           oldb = b;
           oldc = c;
           oldd = d;
@@ -1146,7 +1148,7 @@ module.exports = function(o) {
        * @see this.setPad() method
        */
       var hexcase = (options && typeof options.uppercase === 'boolean') ? options.uppercase : false, // hexadecimal output case format. false - lowercase; true - uppercase  */
-        b64pad = (options && typeof options.pad === 'string') ? options.pda : '=',
+        b64pad = (options && typeof options.pad === 'string') ? options.pad : '=',
         /* base-64 pad character. Default '=' for strict RFC compliance   */
         utf8 = (options && typeof options.utf8 === 'boolean') ? options.utf8 : true,
         /* enable/disable utf8 encoding */
@@ -1390,7 +1392,7 @@ module.exports = function(o) {
        */
       var hexcase = (options && typeof options.uppercase === 'boolean') ? options.uppercase : false,
         /* hexadecimal output case format. false - lowercase; true - uppercase  */
-        b64pad = (options && typeof options.pad === 'string') ? options.pda : '=',
+        b64pad = (options && typeof options.pad === 'string') ? options.pad : '=',
         /* base-64 pad character. Default '=' for strict RFC compliance   */
         utf8 = (options && typeof options.utf8 === 'boolean') ? options.utf8 : true,
         /* enable/disable utf8 encoding */
@@ -1768,7 +1770,7 @@ module.exports = function(o) {
        */
       var hexcase = (options && typeof options.uppercase === 'boolean') ? options.uppercase : false,
         /* hexadecimal output case format. false - lowercase; true - uppercase  */
-        b64pad = (options && typeof options.pad === 'string') ? options.pda : '=',
+        b64pad = (options && typeof options.pad === 'string') ? options.pa : '=',
         /* base-64 pad character. Default '=' for strict RFC compliance   */
         utf8 = (options && typeof options.utf8 === 'boolean') ? options.utf8 : true,
         /* enable/disable utf8 encoding */
@@ -2245,6 +2247,8 @@ function json2Plugin() {
 }
 
 },{"./lib/json2":7}],7:[function(require,module,exports){
+/* eslint-disable */
+
 //  json2.js
 //  2016-10-28
 //  Public Domain.
@@ -2756,76 +2760,24 @@ var util = require('./util')
 var slice = util.slice
 var pluck = util.pluck
 var each = util.each
+var bind = util.bind
 var create = util.create
 var isList = util.isList
 var isFunction = util.isFunction
 var isObject = util.isObject
 
 module.exports = {
-	createStore: createStore,
+	createStore: createStore
 }
 
 var storeAPI = {
-	version: '2.0.4',
+	version: '2.0.12',
 	enabled: false,
-	storage: null,
-
-	// addStorage adds another storage to this store. The store
-	// will use the first storage it receives that is enabled, so
-	// call addStorage in the order of preferred storage.
-	addStorage: function(storage) {
-		if (this.enabled) { return }
-		if (this._testStorage(storage)) {
-			this._storage.resolved = storage
-			this.enabled = true
-			this.storage = storage.name
-		}
-	},
-
-	// addPlugin will add a plugin to this store.
-	addPlugin: function(plugin) {
-		var self = this
-
-		// If the plugin is an array, then add all plugins in the array.
-		// This allows for a plugin to depend on other plugins.
-		if (isList(plugin)) {
-			each(plugin, function(plugin) {
-				self.addPlugin(plugin)
-			})
-			return
-		}
-
-		// Keep track of all plugins we've seen so far, so that we
-		// don't add any of them twice.
-		var seenPlugin = pluck(this._seenPlugins, function(seenPlugin) { return (plugin === seenPlugin) })
-		if (seenPlugin) {
-			return
-		}
-		this._seenPlugins.push(plugin)
-
-		// Check that the plugin is properly formed
-		if (!isFunction(plugin)) {
-			throw new Error('Plugins must be function values that return objects')
-		}
-
-		var pluginProperties = plugin.call(this)
-		if (!isObject(pluginProperties)) {
-			throw new Error('Plugins must return an object of function properties')
-		}
-
-		// Add the plugin function properties to this store instance.
-		each(pluginProperties, function(pluginFnProp, propName) {
-			if (!isFunction(pluginFnProp)) {
-				throw new Error('Bad plugin property: '+propName+' from plugin '+plugin.name+'. Plugins should only return functions.')
-			}
-			self._assignPluginFnProp(pluginFnProp, propName)
-		})
-	},
-
+	
 	// get returns the value of the given key. If that value
 	// is undefined, it returns optionalDefaultValue instead.
 	get: function(key, optionalDefaultValue) {
-		var data = this._storage().read(this._namespacePrefix + key)
+		var data = this.storage.read(this._namespacePrefix + key)
 		return this._deserialize(data, optionalDefaultValue)
 	},
 
@@ -2835,27 +2787,27 @@ var storeAPI = {
 		if (value === undefined) {
 			return this.remove(key)
 		}
-		this._storage().write(this._namespacePrefix + key, this._serialize(value))
+		this.storage.write(this._namespacePrefix + key, this._serialize(value))
 		return value
 	},
 
 	// remove deletes the key and value stored at the given key.
 	remove: function(key) {
-		this._storage().remove(this._namespacePrefix + key)
+		this.storage.remove(this._namespacePrefix + key)
 	},
 
 	// each will call the given callback once for each key-value pair
 	// in this store.
 	each: function(callback) {
 		var self = this
-		this._storage().each(function(val, namespacedKey) {
-			callback(self._deserialize(val), namespacedKey.replace(self._namespaceRegexp, ''))
+		this.storage.each(function(val, namespacedKey) {
+			callback.call(self, self._deserialize(val), (namespacedKey || '').replace(self._namespaceRegexp, ''))
 		})
 	},
 
 	// clearAll will remove all the stored key-value pairs in this store.
 	clearAll: function() {
-		this._storage().clearAll()
+		this.storage.clearAll()
 	},
 
 	// additional functionality that can't live in plugins
@@ -2866,43 +2818,50 @@ var storeAPI = {
 		return (this._namespacePrefix == '__storejs_'+namespace+'_')
 	},
 
-	// namespace clones the current store and assigns it the given namespace
-	namespace: function(namespace) {
-		if (!this._legalNamespace.test(namespace)) {
-			throw new Error('store.js namespaces can only have alhpanumerics + underscores and dashes')
-		}
-		// create a prefix that is very unlikely to collide with un-namespaced keys
-		var namespacePrefix = '__storejs_'+namespace+'_'
-		return create(this, {
-			_namespacePrefix: namespacePrefix,
-			_namespaceRegexp: namespacePrefix ? new RegExp('^'+namespacePrefix) : null
-		})
-	},
-
 	// createStore creates a store.js instance with the first
 	// functioning storage in the list of storage candidates,
 	// and applies the the given mixins to the instance.
-	createStore: function(storages, plugins) {
-		return createStore(storages, plugins)
+	createStore: function() {
+		return createStore.apply(this, arguments)
 	},
+	
+	addPlugin: function(plugin) {
+		this._addPlugin(plugin)
+	},
+	
+	namespace: function(namespace) {
+		return createStore(this.storage, this.plugins, namespace)
+	}
 }
 
-function createStore(storages, plugins) {
-	var _privateStoreProps = {
-		_seenPlugins: [],
-		_namespacePrefix: '',
-		_namespaceRegexp: null,
-		_legalNamespace: /^[a-zA-Z0-9_\-]+$/, // alpha-numeric + underscore and dash
+function _warn() {
+	var _console = (typeof console == 'undefined' ? null : console)
+	if (!_console) { return }
+	var fn = (_console.warn ? _console.warn : _console.log)
+	fn.apply(_console, arguments)
+}
 
-		_storage: function() {
-			if (!this.enabled) {
-				throw new Error("store.js: No supported storage has been added! "+
-					"Add one (e.g store.addStorage(require('store/storages/cookieStorage')) "+
-					"or use a build with more built-in storages (e.g "+
-					"https://github.com/marcuswestin/store.js/tree/master/dist/store.legacy.min.js)")
-			}
-			return this._storage.resolved
-		},
+function createStore(storages, plugins, namespace) {
+	if (!namespace) {
+		namespace = ''
+	}
+	if (storages && !isList(storages)) {
+		storages = [storages]
+	}
+	if (plugins && !isList(plugins)) {
+		plugins = [plugins]
+	}
+
+	var namespacePrefix = (namespace ? '__storejs_'+namespace+'_' : '')
+	var namespaceRegexp = (namespace ? new RegExp('^'+namespacePrefix) : null)
+	var legalNamespaces = /^[a-zA-Z0-9_\-]*$/ // alpha-numeric + underscore and dash
+	if (!legalNamespaces.test(namespace)) {
+		throw new Error('store.js namespaces can only have alphanumerics + underscores and dashes')
+	}
+	
+	var _privateStoreProps = {
+		_namespacePrefix: namespacePrefix,
+		_namespaceRegexp: namespaceRegexp,
 
 		_testStorage: function(storage) {
 			try {
@@ -2957,14 +2916,80 @@ function createStore(storages, plugins) {
 
 			return (val !== undefined ? val : defaultVal)
 		},
+		
+		_addStorage: function(storage) {
+			if (this.enabled) { return }
+			if (this._testStorage(storage)) {
+				this.storage = storage
+				this.enabled = true
+			}
+		},
+
+		_addPlugin: function(plugin) {
+			var self = this
+
+			// If the plugin is an array, then add all plugins in the array.
+			// This allows for a plugin to depend on other plugins.
+			if (isList(plugin)) {
+				each(plugin, function(plugin) {
+					self._addPlugin(plugin)
+				})
+				return
+			}
+
+			// Keep track of all plugins we've seen so far, so that we
+			// don't add any of them twice.
+			var seenPlugin = pluck(this.plugins, function(seenPlugin) {
+				return (plugin === seenPlugin)
+			})
+			if (seenPlugin) {
+				return
+			}
+			this.plugins.push(plugin)
+
+			// Check that the plugin is properly formed
+			if (!isFunction(plugin)) {
+				throw new Error('Plugins must be function values that return objects')
+			}
+
+			var pluginProperties = plugin.call(this)
+			if (!isObject(pluginProperties)) {
+				throw new Error('Plugins must return an object of function properties')
+			}
+
+			// Add the plugin function properties to this store instance.
+			each(pluginProperties, function(pluginFnProp, propName) {
+				if (!isFunction(pluginFnProp)) {
+					throw new Error('Bad plugin property: '+propName+' from plugin '+plugin.name+'. Plugins should only return functions.')
+				}
+				self._assignPluginFnProp(pluginFnProp, propName)
+			})
+		},
+		
+		// Put deprecated properties in the private API, so as to not expose it to accidential
+		// discovery through inspection of the store object.
+		
+		// Deprecated: addStorage
+		addStorage: function(storage) {
+			_warn('store.addStorage(storage) is deprecated. Use createStore([storages])')
+			this._addStorage(storage)
+		}
 	}
 
-	var store = create(_privateStoreProps, storeAPI)
+	var store = create(_privateStoreProps, storeAPI, {
+		plugins: []
+	})
+	store.raw = {}
+	each(store, function(prop, propName) {
+		if (isFunction(prop)) {
+			store.raw[propName] = bind(store, prop)			
+		}
+	})
 	each(storages, function(storage) {
-		store.addStorage(storage)
+		store._addStorage(storage)
 	})
 	each(plugins, function(plugin) {
-		store.addPlugin(plugin)
+		store._addPlugin(plugin)
 	})
 	return store
 }
@@ -2988,7 +3013,7 @@ module.exports = {
 	isList: isList,
 	isFunction: isFunction,
 	isObject: isObject,
-	Global: Global,
+	Global: Global
 }
 
 function make_assign() {
@@ -3045,8 +3070,8 @@ function slice(arr, index) {
 }
 
 function each(obj, fn) {
-	pluck(obj, function(key, val) {
-		fn(key, val)
+	pluck(obj, function(val, key) {
+		fn(val, key)
 		return false
 	})
 }
@@ -3092,15 +3117,15 @@ function isObject(val) {
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 },{}],10:[function(require,module,exports){
-module.exports = {
+module.exports = [
 	// Listed in order of usage preference
-	'localStorage': require('./localStorage'),
-	'oldFF-globalStorage': require('./oldFF-globalStorage'),
-	'oldIE-userDataStorage': require('./oldIE-userDataStorage'),
-	'cookieStorage': require('./cookieStorage'),
-	'sessionStorage': require('./sessionStorage'),
-	'memoryStorage': require('./memoryStorage'),
-}
+	require('./localStorage'),
+	require('./oldFF-globalStorage'),
+	require('./oldIE-userDataStorage'),
+	require('./cookieStorage'),
+	require('./sessionStorage'),
+	require('./memoryStorage')
+]
 
 },{"./cookieStorage":11,"./localStorage":12,"./memoryStorage":13,"./oldFF-globalStorage":14,"./oldIE-userDataStorage":15,"./sessionStorage":16}],11:[function(require,module,exports){
 // cookieStorage is useful Safari private browser mode, where localStorage
@@ -3429,7 +3454,7 @@ module.exports = {
 	write: write,
 	each: each,
 	remove: remove,
-	clearAll: clearAll,
+	clearAll: clearAll
 }
 
 function sessionStorage() {

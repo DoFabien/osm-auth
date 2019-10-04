@@ -42,7 +42,7 @@ module.exports = function(o) {
             o.oauth_secret, '',
             ohauth.baseString('POST', url, params));
 
-        if (!o.singlepage) {
+        if (o.windowType === 'popup') {
             // Create a 600x550 popup window in the center of the screen
             var w = 600, h = 550,
                 settings = [
@@ -69,10 +69,12 @@ module.exports = function(o) {
                 oauth_callback: resolveUrl(o.landing)
             });
 
-            if (o.singlepage) {
+            if (o.windowType === 'singlepage') {
                 location.href = authorize_url;
-            } else {
+            } else if (o.windowType === 'popup')  {
                 popup.location = authorize_url;
+            } else if (o.windowType === 'newFullPage')  {
+                window.open( authorize_url );
             }
         }
 
@@ -212,7 +214,7 @@ module.exports = function(o) {
         o = _;
         o.url = o.url || 'https://www.openstreetmap.org';
         o.landing = o.landing || 'land.html';
-        o.singlepage = o.singlepage || false;
+        o.windowType = o.windowType || 'popup'
 
         // Optional loading and loading-done functions for nice UI feedback.
         // by default, no-ops

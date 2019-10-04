@@ -24,7 +24,7 @@ declare namespace OSMAuth {
         loading?: () => any;
         done?: () => any;
         landing?: string;
-        singlepage?: boolean;
+        windowType?: 'singlepage' | 'popup' | 'newFullPage';
     }
 
     interface OSMAuthNewOptions {
@@ -35,7 +35,7 @@ declare namespace OSMAuth {
         loading?: () => any;
         done?: () => any;
         landing?: string;
-        singlepage?: boolean;
+        windowType?: 'singlepage' | 'popup' | 'newFullPage';
     }
 
     interface OSMAuthXHROptions {
